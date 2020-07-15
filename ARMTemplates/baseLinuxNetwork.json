@@ -1,0 +1,68 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json",
+    "contentVersion": "1.0.0.0",
+    "parameters": {},
+    "variables": {
+        "location": "[resourceGroup().location]",
+        "uniqueString": "[substring( uniquestring(resourceGroup().id), 0, 5 )]",
+        "vnetName": "[toLower( concat( 'vnet-', substring( uniquestring(resourceGroup().id), 0, 5 ) ) )]",
+        "vnetPrefix": "10.1.0.0/16",
+        "subnetName": "snet1",
+        "subnetPrefix": "10.1.0.0/24",
+        "NSGName": "[toLower( concat( 'nsg-', substring( uniquestring(resourceGroup().id), 0, 5 ) ) )]"
+    },
+    "resources": [
+        {
+            "apiVersion": "2018-08-01",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "name": "[variables('NSGName')]",
+            "location": "[variables('location')]",
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "SSH_rule",
+                        "properties": {
+                            "description": "Allows SSH access",
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "22",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 123,
+                            "direction": "Inbound"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+          "apiVersion": "2018-08-01",
+          "type": "Microsoft.Network/virtualNetworks",
+          "name": "[variables('vnetName')]",
+          "location": "[variables('location')]",
+          "dependsOn": [
+              "[resourceId('Microsoft.Network/networkSecurityGroups', variables('NSGName'))]"
+          ],
+          "properties": {
+              "addressSpace": {
+                  "addressPrefixes": [
+                      "[variables('vnetPrefix')]"
+                  ]
+              },
+              "subnets": [
+                {
+                  "name": "[variables('subnetName')]",
+                  "properties": {
+                    "addressPrefix": "[variables('subnetPrefix')]",
+                    "networkSecurityGroup": {
+                        "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('NSGName'))]"
+                    }
+                  }
+                }
+              ]
+            }
+        }
+    ],
+    "outputs": {}
+}
